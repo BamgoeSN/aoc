@@ -2,7 +2,30 @@ use std::{collections::HashMap, io};
 
 fn main() {
     let input = io::read_to_string(io::stdin()).unwrap();
+    let queries = parse_queries(&input);
 
+    let mut root_content = HashMap::new();
+    let mut queryit = queries.iter().cloned();
+    let fquery = queryit.next().unwrap();
+    initialize(&mut root_content, fquery, &mut queryit);
+    let mut root_size = 0;
+    set_foldersize(&mut root_content, &mut root_size);
+
+    // Puzzle 1
+    let mut ans: u64 = 0;
+    search_dir(&root_content, root_size, 100000, &mut ans);
+    println!("Puzzle 1: {}", ans);
+
+    // Puzzle 2
+    let mut list = vec![];
+    dir_size(&root_content, root_size, &mut list);
+    list.sort_unstable();
+    let i = list.partition_point(|&x| x < 8729145);
+    let v = list[i];
+    println!("Puzzle 2: {}", v);
+}
+
+fn parse_queries(input: &str) -> Vec<Query> {
     let mut it = input.lines().peekable();
     it.next();
     let mut queries: Vec<Query> = vec![];
@@ -34,26 +57,7 @@ fn main() {
             queries.push(Query::Ls(arr));
         }
     }
-
-    let mut root_content = HashMap::new();
-    let mut queryit = queries.iter().cloned();
-    let fquery = queryit.next().unwrap();
-    initialize(&mut root_content, fquery, &mut queryit);
-    let mut root_size = 0;
-    set_foldersize(&mut root_content, &mut root_size);
-
-    // Puzzle 1
-    let mut ans: u64 = 0;
-    search_dir(&root_content, root_size, 100000, &mut ans);
-    println!("Puzzle 1: {}", ans);
-
-    // Puzzle 2
-    let mut list = vec![];
-    dir_size(&root_content, root_size, &mut list);
-    list.sort_unstable();
-    let i = list.partition_point(|&x| x < 8729145);
-    let v = list[i];
-    println!("Puzzle 2: {}", v);
+    queries
 }
 
 #[derive(Clone, Debug)]
