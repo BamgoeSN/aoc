@@ -16,13 +16,11 @@ fn main() {
         let opr = if ln2_tokens[4] == "+" {
             let v: i64 = ln2_tokens[5].parse().unwrap();
             Opr::Add(v)
+        } else if ln2_tokens[5] == "old" {
+            Opr::Sqr
         } else {
-            if ln2_tokens[5] == "old" {
-                Opr::Sqr
-            } else {
-                let v: i64 = ln2_tokens[5].parse().unwrap();
-                Opr::Mul(v)
-            }
+            let v: i64 = ln2_tokens[5].parse().unwrap();
+            Opr::Mul(v)
         };
 
         macro_rules! take_last {

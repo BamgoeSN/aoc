@@ -7,7 +7,7 @@ fn main() {
     let prog: Vec<Instruction> = input
         .lines()
         .map(|line| {
-            let mut tokens = line.trim().split_whitespace();
+            let mut tokens = line.split_whitespace();
             if tokens.next().unwrap() == "addx" {
                 let v: i64 = tokens.next().unwrap().parse().unwrap();
                 Instruction::Addx(v)

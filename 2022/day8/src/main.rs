@@ -24,8 +24,7 @@ fn main() {
 
     // Puzzle 2
     let ans: u64 = (0..tr)
-        .map(|r| (0..tc).map(|c| get_score(&arr, r, c, tr, tc)).max())
-        .flatten()
+        .filter_map(|r| (0..tc).map(|c| get_score(&arr, r, c, tr, tc)).max())
         .max()
         .unwrap();
     println!("Puzzle 2: {}", ans);
