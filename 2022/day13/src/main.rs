@@ -8,7 +8,7 @@ fn main() {
     for chunk in lines.chunks(3) {
         let mut set = vec![];
         for line in chunk.iter().take(2) {
-            set.push(parse(line.as_bytes()));
+            set.push(parse(line).unwrap().1);
         }
         lists.push(set);
     }
@@ -24,9 +24,9 @@ fn main() {
 
     // Puzzle 2
     let mut whole = Vec::from_iter(lists.into_iter().map(|it| it.into_iter()).flatten());
-    let div1 = vec![List(vec![Val(2)])];
+    let div1 = List(vec![List(vec![Val(2)])]);
     whole.push(div1.clone());
-    let div2 = vec![List(vec![Val(6)])];
+    let div2 = List(vec![List(vec![Val(6)])]);
     whole.push(div2.clone());
     whole.sort_unstable();
 
@@ -40,41 +40,15 @@ enum Elem {
     Val(i64),
     List(Vec<Elem>),
 }
+use nom::{IResult, Parser};
 use Elem::*;
 
-fn parse(line: &[u8]) -> Vec<Elem> {
-    let mut ret = vec![];
-
-    let mut ptr = 1;
-    while ptr < line.len() - 1 {
-        let l = ptr;
-        if line[ptr] == b'[' {
-            let mut cnt = 1;
-            let mut pptr = ptr + 1;
-            while cnt != 0 {
-                if line[pptr] == b'[' {
-                    cnt += 1;
-                } else if line[pptr] == b']' {
-                    cnt -= 1;
-                }
-                pptr += 1;
-            }
-            let r = pptr;
-            ret.push(List(parse(&line[l..r])));
-            ptr = r + 1;
-        } else {
-            let l = ptr;
-            while line[ptr] != b',' && line[ptr] != b']' {
-                ptr += 1;
-            }
-            let r = ptr;
-            let token = std::str::from_utf8(&line[l..r]).unwrap();
-            ret.push(Val(token.parse().unwrap()));
-            ptr += 1;
-        }
-    }
-
-    ret
+fn parse(line: &str) -> IResult<&str, Elem> {
+    use nom::{branch::alt, bytes::complete::tag, multi::separated_list0, sequence::delimited};
+    alt((
+        delimited(tag("["), separated_list0(tag(","), parse), tag("]")).map(|list| List(list)),
+        nom::character::complete::i64.map(|val| Val(val)),
+    ))(line)
 }
 
 impl PartialEq for Elem {
@@ -110,4 +84,39 @@ impl Ord for Elem {
             (List(x), List(y)) => x.cmp(y),
         }
     }
+}
+
+fn _parse_old(line: &[u8]) -> Vec<Elem> {
+    let mut ret = vec![];
+
+    let mut ptr = 1;
+    while ptr < line.len() - 1 {
+        let l = ptr;
+        if line[ptr] == b'[' {
+            let mut cnt = 1;
+            let mut pptr = ptr + 1;
+            while cnt != 0 {
+                if line[pptr] == b'[' {
+                    cnt += 1;
+                } else if line[pptr] == b']' {
+                    cnt -= 1;
+                }
+                pptr += 1;
+            }
+            let r = pptr;
+            ret.push(List(_parse_old(&line[l..r])));
+            ptr = r + 1;
+        } else {
+            let l = ptr;
+            while line[ptr] != b',' && line[ptr] != b']' {
+                ptr += 1;
+            }
+            let r = ptr;
+            let token = std::str::from_utf8(&line[l..r]).unwrap();
+            ret.push(Val(token.parse().unwrap()));
+            ptr += 1;
+        }
+    }
+
+    ret
 }
