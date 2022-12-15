@@ -2,20 +2,7 @@ use std::io;
 
 fn main() {
     let input = io::read_to_string(io::stdin()).unwrap();
-    let input = input.trim();
-
-    let prog: Vec<Instruction> = input
-        .lines()
-        .map(|line| {
-            let mut tokens = line.split_whitespace();
-            if tokens.next().unwrap() == "addx" {
-                let v: i64 = tokens.next().unwrap().parse().unwrap();
-                Instruction::Addx(v)
-            } else {
-                Instruction::Noop
-            }
-        })
-        .collect();
+    let prog = parse(&input).unwrap().1;
 
     // Puzzle 1
     let mut cpu = Cpu::new();
@@ -84,4 +71,23 @@ impl Cpu {
             .filter(|s| s.len() == 40)
             .collect()
     }
+}
+
+use nom::{
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::{self, line_ending},
+    multi::separated_list0,
+    sequence::preceded,
+    IResult, Parser,
+};
+
+fn parse(input: &str) -> IResult<&str, Vec<Instruction>> {
+    separated_list0(
+        line_ending,
+        alt((
+            preceded(tag("addx "), complete::i64).map(|x| Instruction::Addx(x)),
+            tag("noop").map(|_| Instruction::Noop),
+        )),
+    )(input)
 }
