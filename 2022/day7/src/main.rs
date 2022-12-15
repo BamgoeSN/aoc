@@ -135,7 +135,7 @@ fn dir_size(curr: &HashMap<&str, Content>, mysize: u64, list: &mut Vec<u64>) {
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{line_ending, multispace0, not_line_ending},
+    character::complete::{self, line_ending, multispace0, not_line_ending},
     multi::separated_list0,
     sequence::{preceded, separated_pair},
     Parser,
@@ -166,7 +166,7 @@ fn parse_ls(input: &str) -> nom::IResult<&str, Query> {
         separated_list0(
             line_ending,
             alt((
-                separated_pair(nom::character::complete::u64, multispace0, not_line_ending)
+                separated_pair(complete::u64, multispace0, not_line_ending)
                     .map(|x| LsType::File(x.1, x.0)),
                 preceded(tag("dir "), not_line_ending).map(LsType::Folder),
             )),
