@@ -1,50 +1,9 @@
-use std::{cmp::Reverse, collections::HashMap, io, iter::FromIterator};
+use std::{cmp::Reverse, collections::HashMap, io};
 
 fn main() {
     let input = io::read_to_string(io::stdin()).unwrap();
-    let lines = Vec::from_iter(input.lines());
-
-    let mut monke_src = vec![];
-    for chunk in lines.chunks(7) {
-        let items: Vec<i64> = chunk[1]
-            .split_whitespace()
-            .skip(2)
-            .map(|s| s.trim_end_matches(',').parse().unwrap())
-            .collect();
-
-        let ln2_tokens = Vec::from_iter(chunk[2].split_whitespace());
-        let opr = if ln2_tokens[4] == "+" {
-            let v: i64 = ln2_tokens[5].parse().unwrap();
-            Opr::Add(v)
-        } else if ln2_tokens[5] == "old" {
-            Opr::Sqr
-        } else {
-            let v: i64 = ln2_tokens[5].parse().unwrap();
-            Opr::Mul(v)
-        };
-
-        macro_rules! take_last {
-            ($i:expr) => {
-                chunk[$i]
-                    .split_whitespace()
-                    .rev()
-                    .next()
-                    .unwrap()
-                    .parse()
-                    .unwrap()
-            };
-        }
-
-        let check: i64 = take_last!(3);
-        let iftrue: usize = take_last!(4);
-        let iffalse: usize = take_last!(5);
-
-        monke_src.push(Monkey {
-            items,
-            opr,
-            test: (check, iftrue, iffalse),
-        });
-    }
+    let monke_src = parse(&input).unwrap().1;
+    println!("{:#?}", monke_src);
 
     // Puzzle 1
     let mut counter: Vec<usize> = vec![0; monke_src.len()];
@@ -159,4 +118,60 @@ fn monke_modulo(monke: &Monkey, mods: &[i64]) -> ModuloMonkey {
         opr: monke.opr,
         test: monke.test,
     }
+}
+
+use nom::{
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::{self, line_ending, multispace0, not_line_ending},
+    multi::separated_list0,
+    sequence::{delimited, pair, preceded},
+    IResult, Parser,
+};
+
+fn parse(input: &str) -> IResult<&str, Vec<Monkey>> {
+    separated_list0(line_ending, parse_monke)(input)
+}
+
+fn parse_monke(chunk: &str) -> IResult<&str, Monkey> {
+    delimited(
+        pair(not_line_ending, line_ending),
+        pair(
+            pair(
+                preceded(
+                    pair(multispace0, tag("Starting items: ")),
+                    separated_list0(tag(", "), complete::i64),
+                ),
+                preceded(
+                    pair(multispace0, tag("Operation: new = old ")),
+                    alt((
+                        tag("* old").map(|_| Opr::Sqr),
+                        preceded(tag("* "), complete::i64).map(|v| Opr::Mul(v)),
+                        preceded(tag("+ "), complete::i64).map(|v| Opr::Add(v)),
+                    )),
+                ),
+            ),
+            pair(
+                preceded(pair(multispace0, tag("Test: divisible by ")), complete::i64),
+                pair(
+                    preceded(
+                        pair(multispace0, tag("If true: throw to monkey ")),
+                        complete::u64,
+                    )
+                    .map(|v| v as usize),
+                    preceded(
+                        pair(multispace0, tag("If false: throw to monkey ")),
+                        complete::u64,
+                    )
+                    .map(|v| v as usize),
+                ),
+            ),
+        )
+        .map(|x| Monkey {
+            items: x.0 .0,
+            opr: x.0 .1,
+            test: (x.1 .0, x.1 .1 .0, x.1 .1 .1),
+        }),
+        line_ending,
+    )(chunk)
 }
