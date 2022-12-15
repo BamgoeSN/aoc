@@ -2,7 +2,7 @@ use std::{collections::HashMap, io};
 
 fn main() {
     let input = io::read_to_string(io::stdin()).unwrap();
-    let queries = parse_queries(&input);
+    let queries = parse(&input).unwrap().1;
 
     let mut root_content = HashMap::new();
     let mut queryit = queries.iter().cloned();
@@ -25,39 +25,50 @@ fn main() {
     println!("Puzzle 2: {}", v);
 }
 
-fn parse_queries(input: &str) -> Vec<Query> {
-    let mut it = input.lines().peekable();
-    it.next();
-    let mut queries: Vec<Query> = vec![];
-    while let Some(q) = it.next() {
-        let mut tok = q.split_whitespace();
-        tok.next();
-        let qtype = tok.next().unwrap();
-        if qtype == "cd" {
-            let fdname = tok.next().unwrap();
-            if fdname == ".." {
-                queries.push(Query::Cd(None));
-            } else {
-                queries.push(Query::Cd(Some(fdname)));
-            }
-        } else if qtype == "ls" {
-            let mut arr = vec![];
-            while let Some(&line) = it.peek() {
-                if line.starts_with('$') {
-                    break;
-                }
-                it.next();
-                let (lstype, name) = line.split_once(' ').unwrap();
-                if lstype == "dir" {
-                    arr.push(LsType::Folder(name));
-                } else {
-                    arr.push(LsType::File(name, lstype.parse().unwrap()));
-                }
-            }
-            queries.push(Query::Ls(arr));
-        }
-    }
-    queries
+fn parse(input: &str) -> nom::IResult<&str, Vec<Query>> {
+    use nom::{
+        branch::alt,
+        bytes::complete::tag,
+        character::complete::{line_ending, multispace0, not_line_ending},
+        multi::separated_list0,
+        sequence::{preceded, separated_pair},
+        Parser,
+    };
+
+    preceded(
+        tag("$ cd /\n"),
+        separated_list0(
+            line_ending,
+            preceded(
+                tag("$ "),
+                alt((
+                    preceded(tag("cd "), not_line_ending).map(|s| {
+                        if s == ".." {
+                            Query::Cd(None)
+                        } else {
+                            Query::Cd(Some(s))
+                        }
+                    }),
+                    preceded(
+                        tag("ls\n"),
+                        separated_list0(
+                            line_ending,
+                            alt((
+                                separated_pair(
+                                    nom::character::complete::u64,
+                                    multispace0,
+                                    not_line_ending,
+                                )
+                                .map(|x| LsType::File(x.1, x.0)),
+                                preceded(tag("dir "), not_line_ending).map(LsType::Folder),
+                            )),
+                        )
+                        .map(Query::Ls),
+                    ),
+                )),
+            ),
+        ),
+    )(input)
 }
 
 #[derive(Clone, Debug)]
