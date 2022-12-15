@@ -25,55 +25,6 @@ fn main() {
     println!("Puzzle 2: {}", v);
 }
 
-fn parse(input: &str) -> nom::IResult<&str, Vec<Query>> {
-    use nom::{
-        branch::alt, bytes::complete::tag, character::complete::line_ending,
-        multi::separated_list0, sequence::preceded,
-    };
-    preceded(
-        tag("$ cd /\n"),
-        separated_list0(line_ending, preceded(tag("$ "), alt((parse_cd, parse_ls)))),
-    )(input)
-}
-
-fn parse_cd(input: &str) -> nom::IResult<&str, Query> {
-    use nom::{
-        bytes::complete::tag, character::complete::not_line_ending, sequence::preceded, Parser,
-    };
-    preceded(tag("cd "), not_line_ending)
-        .map(|s| {
-            if s == ".." {
-                Query::Cd(None)
-            } else {
-                Query::Cd(Some(s))
-            }
-        })
-        .parse(input)
-}
-
-fn parse_ls(input: &str) -> nom::IResult<&str, Query> {
-    use nom::{
-        branch::alt,
-        bytes::complete::tag,
-        character::complete::{line_ending, multispace0, not_line_ending},
-        multi::separated_list0,
-        sequence::{preceded, separated_pair},
-        Parser,
-    };
-    preceded(
-        tag("ls\n"),
-        separated_list0(
-            line_ending,
-            alt((
-                separated_pair(nom::character::complete::u64, multispace0, not_line_ending)
-                    .map(|x| LsType::File(x.1, x.0)),
-                preceded(tag("dir "), not_line_ending).map(LsType::Folder),
-            )),
-        )
-        .map(Query::Ls),
-    )(input)
-}
-
 #[derive(Clone, Debug)]
 enum Query<'a> {
     Cd(Option<&'a str>),
@@ -179,4 +130,47 @@ fn dir_size(curr: &HashMap<&str, Content>, mysize: u64, list: &mut Vec<u64>) {
             dir_size(child, *size, list);
         }
     }
+}
+
+use nom::{
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::{line_ending, multispace0, not_line_ending},
+    multi::separated_list0,
+    sequence::{preceded, separated_pair},
+    Parser,
+};
+
+fn parse(input: &str) -> nom::IResult<&str, Vec<Query>> {
+    preceded(
+        tag("$ cd /\n"),
+        separated_list0(line_ending, preceded(tag("$ "), alt((parse_cd, parse_ls)))),
+    )(input)
+}
+
+fn parse_cd(input: &str) -> nom::IResult<&str, Query> {
+    preceded(tag("cd "), not_line_ending)
+        .map(|s| {
+            if s == ".." {
+                Query::Cd(None)
+            } else {
+                Query::Cd(Some(s))
+            }
+        })
+        .parse(input)
+}
+
+fn parse_ls(input: &str) -> nom::IResult<&str, Query> {
+    preceded(
+        tag("ls\n"),
+        separated_list0(
+            line_ending,
+            alt((
+                separated_pair(nom::character::complete::u64, multispace0, not_line_ending)
+                    .map(|x| LsType::File(x.1, x.0)),
+                preceded(tag("dir "), not_line_ending).map(LsType::Folder),
+            )),
+        )
+        .map(Query::Ls),
+    )(input)
 }
